@@ -1,0 +1,15 @@
+{
+  "id": "route-bookmarks-test", "name": "Route fixture", "apiBaseUrl": "https://suggest.travelpayouts.com/", "initialScreen": "search",
+  "screens": {
+    "search": {"title": "Search", "onEnter": "loadBookmarks", "components": []},
+    "results": {"title": "Results", "components": []},
+    "bookmark": {"title": "Bookmark", "components": []}
+  },
+  "actions": {
+    "searchTrips": {"request": {"method": "GET", "url": "search?service=tutu_trains&term={{form.from}}&term2={{form.to}}"}, "success": {"storeResponseAs": "searchResult", "navigate": "results"}},
+    "loadBookmarks": {"request": {"method": "BOOKMARK", "operation": "list"}, "success": {"storeResponseAs": "saved"}},
+    "saveRoute": {"request": {"method": "BOOKMARK", "operation": "save", "item": {"id": "{{concat(form.from, ':', form.to)}}", "from": "{{form.from}}", "to": "{{form.to}}"}}, "success": {"storeResponseAs": "saved", "navigate": "search"}},
+    "openBookmark": {"request": {"method": "LOCAL"}, "success": {"setForm": {"from": "{{form.bookmark.from}}", "to": "{{form.bookmark.to}}"}, "navigate": "bookmark"}},
+    "removeRoute": {"request": {"method": "BOOKMARK", "operation": "remove", "id": "{{form.bookmark.id}}"}, "success": {"storeResponseAs": "saved", "navigate": "search"}}
+  }
+}

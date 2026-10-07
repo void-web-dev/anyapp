@@ -1,0 +1,127 @@
+{
+  "format": "any2app.flow",
+  "version": 1,
+  "id": "dummyjson-shop",
+  "name": "Dummy Shop",
+  "apiBaseUrl": "https://dummyjson.com",
+  "sessionPolicy": {"initialScreen": "login", "resumeScreen": "catalog", "refresh": {"enabled": false}},
+  "transport": {"allowedOrigins": ["https://dummyjson.com"], "timeoutSeconds": 20},
+  "screens": {
+    "login": {
+      "title": "Dummy Shop",
+      "components": [
+        {"type": "text", "text": "Магазин в одном JSON", "style": "display"},
+        {"type": "alert", "title": "Учебное приложение", "description": "Тестовые товары и пользователи DummyJSON. Не вводите личный пароль. Реальных покупок нет."},
+        {"type": "button", "label": "Войти в демо-аккаунт", "action": "demoLogin"},
+        {"type": "separator"},
+        {"type": "text", "text": "Или используйте другого тестового пользователя DummyJSON", "style": "muted"},
+        {"type": "input", "id": "username", "label": "Логин", "placeholder": "emilys"},
+        {"type": "input", "id": "password", "label": "Тестовый пароль", "obscure": true},
+        {"type": "button", "label": "Войти", "action": "login", "variant": "outline"}
+      ]
+    },
+    "catalog": {
+      "title": "Каталог",
+      "requiresCompletedAuthentication": true,
+      "onEnter": "loadCatalog",
+      "refreshAction": "loadCatalog",
+      "components": [
+        {"type": "text", "text": "Найдите что-нибудь интересное", "style": "title"},
+        {"type": "input", "id": "query", "label": "Поиск товаров", "placeholder": "Например: phone"},
+        {"type": "button", "label": "Найти", "action": "loadCatalog"},
+        {"type": "button", "label": "Мой профиль", "action": "openProfile", "variant": "outline"},
+        {"type": "text", "text": "Найдено: {{data.catalog.total}}. Показаны первые 24 товара. Цены в USD.", "style": "muted"},
+        {"type": "list", "id": "selectedProduct", "source": "{{data.catalog.products}}", "titleField": "title", "descriptionFields": ["category", "price"], "emptyText": "Ничего не найдено. Измените запрос или повторите загрузку.", "action": "openProduct"},
+        {"type": "button", "label": "Выйти из аккаунта", "action": "logout", "variant": "ghost"}
+      ]
+    },
+    "product": {
+      "title": "Товар",
+      "requiresCompletedAuthentication": true,
+      "canGoBack": true,
+      "refreshAction": "openProduct",
+      "components": [
+        {"type": "image", "source": "{{data.product.thumbnail}}", "height": 240, "fit": "contain", "alt": "Фотография товара"},
+        {"type": "text", "text": "{{data.product.title}}", "style": "display"},
+        {"type": "text", "text": "{{data.product.price}} USD", "style": "title"},
+        {"type": "text", "text": "{{data.product.description}}"},
+        {"type": "separator"},
+        {"type": "text", "text": "Категория: {{data.product.category}}"},
+        {"type": "text", "text": "Рейтинг: {{data.product.rating}} · На складе: {{data.product.stock}}"},
+        {"type": "text", "text": "{{data.product.shippingInformation}}", "style": "muted"},
+        {"type": "alert", "title": "Демонстрационные данные", "description": "Оформление заказа и оплата не предусмотрены."},
+        {"type": "button", "label": "К каталогу", "action": "goCatalog"}
+      ]
+    },
+    "profile": {
+      "title": "Мой профиль",
+      "requiresCompletedAuthentication": true,
+      "canGoBack": true,
+      "refreshAction": "openProfile",
+      "components": [
+        {"type": "image", "source": "{{data.profile.image}}", "height": 100, "fit": "contain", "alt": "Аватар тестового пользователя"},
+        {"type": "text", "text": "{{data.profile.firstName}} {{data.profile.lastName}}", "style": "display"},
+        {"type": "text", "text": "@{{data.profile.username}}", "style": "muted"},
+        {"type": "text", "text": "{{data.profile.email}}"},
+        {"type": "alert", "title": "Защищённый запрос", "description": "Профиль получен через /auth/me с Bearer-токеном. После истечения сессии потребуется новый вход."},
+        {"type": "button", "label": "К каталогу", "action": "goCatalog"},
+        {"type": "button", "label": "Выйти из аккаунта", "action": "logout", "variant": "outline"}
+      ]
+    }
+  },
+  "actions": {
+    "demoLogin": {
+      "type": "sequence",
+      "steps": [
+        {"type": "set", "target": "form.username", "value": "emilys"},
+        {"type": "set", "target": "form.password", "value": "emilyspass"},
+        {"type": "call", "action": "login"}
+      ]
+    },
+    "login": {
+      "type": "sequence",
+      "require": ["form.username", "form.password"],
+      "steps": [
+        {"type": "clear", "targets": ["session", "data"]},
+        {"type": "http", "method": "POST", "url": "/auth/login", "authorization": "none", "encoding": "json", "body": {"username": "{{form.username}}", "password": "{{form.password}}", "expiresInMins": 30}, "requireResponse": {"accessToken": "non-empty-string", "refreshToken": "non-empty-string"}, "saveResponse": "scratch.login"},
+        {"type": "secureSessionCommit", "values": {"accessToken": "{{scratch.login.accessToken}}", "refreshToken": "{{scratch.login.refreshToken}}", "authenticationCompleted": true}},
+        {"type": "set", "target": "form.query", "value": ""},
+        {"type": "navigate", "screen": "catalog", "replaceHistory": true}
+      ],
+      "onError": {"clear": ["session", "data"], "navigate": "login", "message": "Войти не удалось. Проверьте тестовый логин, пароль и подключение к интернету."},
+      "finally": {"clear": ["scratch", "form.password"]}
+    },
+    "loadCatalog": {
+      "type": "sequence",
+      "requiresCompletedAuthentication": true,
+      "steps": [
+        {"type": "clear", "targets": ["data.catalog"]},
+        {"type": "http", "method": "GET", "url": "/products/search", "authorization": "none", "query": {"q": "{{concat(form.query)}}", "limit": 24}, "saveResponse": "data.catalog"}
+      ],
+      "onError": {"message": "Не удалось загрузить каталог. Потяните экран вниз, чтобы повторить."}
+    },
+    "openProduct": {
+      "type": "sequence",
+      "requiresCompletedAuthentication": true,
+      "require": ["form.selectedProduct.id"],
+      "steps": [
+        {"type": "clear", "targets": ["data.product"]},
+        {"type": "http", "method": "GET", "url": "/products/{{form.selectedProduct.id}}", "authorization": "none", "saveResponse": "data.product"},
+        {"type": "navigate", "screen": "product"}
+      ],
+      "onError": {"navigate": "catalog", "message": "Не удалось загрузить товар. Выберите его снова."}
+    },
+    "openProfile": {
+      "type": "sequence",
+      "requiresCompletedAuthentication": true,
+      "steps": [
+        {"type": "clear", "targets": ["data.profile"]},
+        {"type": "http", "method": "GET", "url": "/auth/me", "authorization": {"scheme": "Bearer", "token": "{{session.accessToken}}"}, "saveResponse": "data.profile"},
+        {"type": "navigate", "screen": "profile"}
+      ],
+      "onError": {"message": "Не удалось загрузить профиль. При истечении сессии войдите снова."}
+    },
+    "goCatalog": {"type": "navigate", "screen": "catalog", "replaceHistory": true},
+    "logout": {"type": "clearAndNavigate", "clear": ["session", "data", "products", "form", "challenge", "scratch"], "screen": "login"}
+  }
+}

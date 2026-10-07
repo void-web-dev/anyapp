@@ -1,0 +1,17 @@
+{
+  "title": "Маркетплейс any2app",
+  "description": "Выберите приложение или подключите собственную конфигурацию по URL.",
+  "apps": [
+    {
+      "id": "dummyjson-shop",
+      "name": "Dummy Shop",
+      "description": "Учебный магазин на DummyJSON: вход, поиск товаров, карточки и профиль. Без реальных покупок.",
+      "category": "Демо и обучение",
+      "icon": "shopping",
+      "configuration": {
+        "type": "asset",
+        "source": "assets/config/dummyjson_demo.json"
+      }
+    }
+  ]
+}
